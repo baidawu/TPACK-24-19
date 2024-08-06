@@ -1,0 +1,79 @@
+import itertools
+from tabulate import tabulate
+
+def is_arithmetic_sequence(sequence):
+    """判断一个数列是否是等差数列"""
+    if len(sequence) < 2:
+        return True
+    d = sequence[1] - sequence[0]
+    return all(sequence[i] - sequence[i-1] == d for i in range(2, len(sequence)))
+
+def can_form_arithmetic_groups(sequence, m):
+    """判断一个数列是否能被分成 m 组，每组 4 个数且每组都是等差数列"""
+    n = len(sequence)
+    if n != 4 * m:
+        return False
+    
+    # 生成所有可能的 4 组
+    possible_groups = list(itertools.combinations(sequence, 4))
+    
+    # 遍历所有可能的分组
+    for groups in itertools.combinations(possible_groups, m):
+        # 检查这些组合是否覆盖了全部数列
+        all_numbers = set()
+        valid = True
+        for group in groups:
+            if is_arithmetic_sequence(group) and not any(x in all_numbers for x in group):
+                all_numbers.update(group)
+            else:
+                valid = False
+                break
+        if valid and len(all_numbers) == len(sequence):
+            return True, [list(group) for group in groups]
+    
+    return False, []
+
+def calculate_P_m(m):
+    sequence_length = 4 * m + 2
+    sequence = list(range(1, sequence_length + 1))  # 生成初始等差数列
+
+    total_combinations = 0
+    valid_combinations = 0
+    valid_groups = []
+
+    # 生成集合 A 和 B
+    A = {4 * k + 1 for k in range(m + 1)}
+    B = {4 * k + 2 for k in range(m + 1)}
+
+    # 遍历所有 i 和 j 的组合
+    for i in range(1, sequence_length + 1):
+        for j in range(i + 1, sequence_length + 1):
+            if (i in A and j in B) or (i in B and j in A):
+                if j - i != 3:
+                    remaining_sequence = [x for x in sequence if x != i and x != j]
+                    is_valid, groups = can_form_arithmetic_groups(remaining_sequence, m)
+                    if is_valid:
+                        valid_combinations += 1
+                        valid_groups.append((i, j, groups))
+            total_combinations += 1
+
+    P_m = f"{valid_combinations}/{total_combinations if total_combinations > 0 else 0}"
+    return P_m, sequence, valid_groups
+
+# 示例使用
+m = 4  # 可以修改 m 的值来计算不同的情况
+P_m, original_sequence, valid_groups = calculate_P_m(m)
+
+print(f"m={m}")
+print(f"原始数列: {original_sequence}")
+print(f"P({m}) = {P_m}")
+print("以下是所有符合条件的 (i, j) 及其对应的分组:")
+
+# 格式化输出为表格形式
+table = []
+for (i, j, groups) in valid_groups:
+    groups_str = "\t".join([str(group) for group in groups])
+    table.append([f"删除第{i},{j}项", groups_str])
+
+print(tabulate(table, headers=["剩余数列分组"]))
+
